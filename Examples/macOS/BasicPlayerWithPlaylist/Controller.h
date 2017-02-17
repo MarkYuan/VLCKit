@@ -29,10 +29,12 @@
     IBOutlet id playlistOutline;
     IBOutlet id videoHolderView;
     IBOutlet id spuPopup;
-
-    VLCVideoView * videoView;
-    VLCMediaList *playlist;
-    VLCMediaPlayer *player;
+  
+  VLCVideoView * videoView1;
+  VLCVideoView * videoView2;
+  VLCMediaList *playlist;
+  VLCMediaPlayer *player1;
+  VLCMediaPlayer *player2;
     int mediaIndex;
 }
 - (void)awakeFromNib;

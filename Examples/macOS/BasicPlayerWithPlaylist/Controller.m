@@ -30,21 +30,28 @@
     [NSApp setDelegate:self];
 
     // Allocate a VLCVideoView instance and tell it what area to occupy.
-    NSRect rect = NSMakeRect(0, 0, 0, 0);
-    rect.size = [videoHolderView frame].size;
-
-    videoView = [[VLCVideoView alloc] initWithFrame:rect];
-    [videoHolderView addSubview:videoView];
-    [videoView setAutoresizingMask: NSViewHeightSizable|NSViewWidthSizable];
-    videoView.fillScreen = YES;
+  CGSize size = [videoHolderView frame].size;
+  NSRect rect1 = NSMakeRect(0, 0, size.width / 2, size.height);
+  NSRect rect2 = NSMakeRect(size.width / 2, 0, size.width / 2, size.height);
+  
+  videoView1 = [[VLCVideoView alloc] initWithFrame:rect1];
+  videoView2 = [[VLCVideoView alloc] initWithFrame:rect2];
+  [videoHolderView addSubview:videoView1];
+  [videoHolderView addSubview:videoView2];
+  [videoView1 setAutoresizingMask: NSViewHeightSizable|NSViewWidthSizable];
+  videoView1.fillScreen = YES;
+  [videoView2 setAutoresizingMask: NSViewHeightSizable|NSViewWidthSizable];
+  videoView2.fillScreen = YES;
 
     [VLCLibrary sharedLibrary];
 
     playlist = [[VLCMediaList alloc] init];
     [playlist addObserver:self forKeyPath:@"media" options:NSKeyValueObservingOptionNew context:nil];
-
-    player = [[VLCMediaPlayer alloc] initWithVideoView:videoView];
-    player.delegate = self;
+  
+  player1 = [[VLCMediaPlayer alloc] initWithVideoView:videoView1];
+  player2 = [[VLCMediaPlayer alloc] initWithVideoView:videoView2];
+  player1.delegate = self;
+  player2.delegate = self;
     mediaIndex = -1;
 
     [playlistOutline registerForDraggedTypes:[NSArray arrayWithObjects:NSFilenamesPboardType, NSURLPboardType, nil]];
@@ -58,20 +65,26 @@
 - (void)applicationWillTerminate:(NSNotification *)aNotification
 {
     [playlist removeObserver:self forKeyPath:@"media"];
-
-    [player pause];
-    [player setMedia:nil];
-    [player release];
-    [playlist release];
-    [videoView release];
+  
+  [player1 pause];
+  [player1 setMedia:nil];
+  [player1 release];
+  [player2 pause];
+  [player2 setMedia:nil];
+  [player2 release];
+  [playlist release];
+  [videoView1 release];
+  [videoView2 release];
 }
 
 - (void)changeAndPlay:(id)sender
 {
     if ([playlistOutline selectedRow] != mediaIndex) {
         [self setMediaIndex:[playlistOutline selectedRow]];
-        if (![player isPlaying])
-            [player play];
+      if (![player1 isPlaying])
+        [player1 play];
+      if (![player2 isPlaying])
+        [player2 play];
     }
 }
 
@@ -85,30 +98,33 @@
     if (value > [playlist count] - 1)
         value = [playlist count] - 1;
 
-    mediaIndex = value;
-    [player setMedia:[playlist mediaAtIndex:mediaIndex]];
+  mediaIndex = value;
+  [player1 setMedia:[playlist mediaAtIndex:mediaIndex]];
+  [player2 setMedia:[playlist mediaAtIndex:mediaIndex]];
 }
 
 - (void)play:(id)sender
 {
     [self setMediaIndex:mediaIndex+1];
-    if (![player isPlaying] && [playlist count] > 0) {
+    if (![player1 isPlaying] && [playlist count] > 0) {
         NSLog(@"%@ length = %@", [playlist mediaAtIndex:mediaIndex], [[playlist mediaAtIndex:mediaIndex] lengthWaitUntilDate:[NSDate dateWithTimeIntervalSinceNow:60]]);
-        [player play];
+        [player1 play];
+      [player2 play];
     }
 }
 
 - (void)pause:(id)sender
 {
-    NSLog(@"Sending pause message to media player...");
-    [player pause];
+  NSLog(@"Sending pause message to media player...");
+  [player1 pause];
+  [player2 pause];
 }
 
 - (void)mediaPlayerStateChanged:(NSNotification *)aNotification
 {
-    if (player.media) {
-        NSArray *spuTracks = [player videoSubTitlesNames];
-        NSArray *spuTrackIndexes = [player videoSubTitlesIndexes];
+    if (player1.media) {
+        NSArray *spuTracks = [player1 videoSubTitlesNames];
+        NSArray *spuTrackIndexes = [player1 videoSubTitlesIndexes];
 
         NSUInteger count = [spuTracks count];
         [spuPopup removeAllItems];
@@ -124,8 +140,8 @@
 
 - (void)setSPU:(id)sender
 {
-    if (player.media)
-        player.currentVideoSubTitleIndex = [[spuPopup selectedItem] tag];
+    if (player1.media)
+        player1.currentVideoSubTitleIndex = [[spuPopup selectedItem] tag];
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
